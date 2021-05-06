@@ -1,0 +1,360 @@
+import 'dart:io';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:path_provider_ex/path_provider_ex.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../homepage.dart';
+
+class Camera extends StatefulWidget {
+  @override
+  _CameraState createState() => _CameraState();
+}
+
+class _CameraState extends State<Camera> {
+  final picker = ImagePicker();
+  final pdf = pw.Document();
+  List<File> _image = [];
+  GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  TextEditingController _pdfName = TextEditingController();
+  bool inProcess = false;
+  _ConvertPDF() {
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Center(
+              child: Text(
+                "Convert to PDF",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: ScreenUtil().setSp(65),
+                ),
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "PDF file name",
+                        style: TextStyle(
+                          fontSize: ScreenUtil().setSp(50),
+                        ),
+                      ),
+                      TextFormField(
+                        autofocus: true,
+                        cursorColor: Color(0xffd65338),
+                        controller: _pdfName,
+                        validator: (value) {
+                          return value.isNotEmpty ? null : "Can't be empty";
+                        },
+                        decoration: InputDecoration(
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color(0xffd65338),
+                              ),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color(0xffd65338),
+                              ),
+                            ),
+                            labelText: "File name",
+                            labelStyle: TextStyle(
+                              color: Color(0xffd65338),
+                              fontSize: ScreenUtil().setSp(50),
+                            ),
+                            errorStyle:
+                                TextStyle(fontSize: ScreenUtil().setSp(30))),
+                      ),
+                      SizedBox(
+                        height: ScreenUtil().setHeight(50),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: ScreenUtil().setWidth(40),
+                                    vertical: ScreenUtil().setHeight(20),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(
+                                      ScreenUtil().setSp(60),
+                                    ),
+                                    border: Border.all(
+                                      color: Color(0xffd65338),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Cancel",
+                                    style: TextStyle(
+                                      color: Color(0xffd65338),
+                                      fontSize: ScreenUtil().setSp(45),
+                                    ),
+                                  ))),
+                          GestureDetector(
+                            onTap: () async {
+                              if (_formKey.currentState.validate()) {
+                                await createPDF();
+                                await savePDF(_pdfName.text);
+                                List<StorageInfo> storageInfo =
+                                    await PathProviderEx.getStorageInfo();
+                                var root = storageInfo[0].rootDir +
+                                    "/Image to PDF Convertor";
+
+                                Navigator.of(context).pop();
+
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (context) {
+                                    return ViewPDF(
+                                      title: "${_pdfName.text}.pdf",
+                                      pathPDF: "$root/${_pdfName.text}.pdf",
+                                    );
+                                  },
+                                ));
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                        content: Text(
+                                  "PDF converted successfully",
+                                  style: TextStyle(
+                                    fontSize: ScreenUtil().setSp(40),
+                                  ),
+                                )));
+                              }
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: ScreenUtil().setWidth(40),
+                                vertical: ScreenUtil().setHeight(20),
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUtil().setSp(60),
+                                ),
+                                color: Color(0xffd65338),
+                              ),
+                              child: Text(
+                                "Convert",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: ScreenUtil().setSp(45),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    ],
+                  )),
+            ),
+          );
+        });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getImageFromCamera();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () {
+        Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => Homepage()));
+      },
+      child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  size: ScreenUtil().setSp(90),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => Homepage()));
+                }),
+            backgroundColor: Color(0xffd65338),
+            title: FittedBox(
+              fit: BoxFit.fitWidth,
+              child: Text(
+                "Camera",
+                style: TextStyle(
+                  fontSize: ScreenUtil().setSp(80),
+                ),
+              ),
+            ),
+            elevation: 0,
+            centerTitle: true,
+          ),
+          body: Container(
+              margin: EdgeInsets.symmetric(
+                  horizontal: ScreenUtil().setWidth(20),
+                  vertical: ScreenUtil().setHeight(20)),
+              child: Column(
+                children: [
+                  (_image.length == 0)
+                      ? Expanded(
+                          child: Center(
+                            child: Text(
+                              "Please pick images",
+                              style: TextStyle(
+                                fontSize: ScreenUtil().setSp(100),
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Expanded(child: buildGridView()),
+                  Row(
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.all(ScreenUtil().setSp(30)),
+                            primary: Color(0xffd65338),
+                            shape: CircleBorder()),
+                        onPressed: getImageFromCamera,
+                        child: Icon(
+                          Icons.add,
+                          size: ScreenUtil().setSp(80),
+                        ),
+                      ),
+                      Expanded(
+                          child: GestureDetector(
+                        onTap: () {
+                          if (_image.length != 0) {
+                            _ConvertPDF();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text(
+                              "Please pick image",
+                              style: TextStyle(
+                                fontSize: ScreenUtil().setSp(40),
+                              ),
+                            )));
+                          }
+                        },
+                        child: Container(
+                          alignment: Alignment.center,
+                          margin: EdgeInsets.symmetric(
+                              horizontal: ScreenUtil().setSp(20)),
+                          width: double.infinity,
+                          height: ScreenUtil().setHeight(140),
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(ScreenUtil().setSp(60)),
+                            color: Color(0xffd65338),
+                          ),
+                          child: Text(
+                            "CONVERT TO PDF",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: ScreenUtil().setSp(70),
+                            ),
+                          ),
+                        ),
+                      ))
+                    ],
+                  )
+                ],
+              ))),
+    );
+  }
+
+  Widget buildGridView() {
+    return GridView.count(
+      crossAxisCount: 3,
+      crossAxisSpacing: 2,
+      mainAxisSpacing: 2,
+      children: List.generate(_image.length, (index) {
+        return GestureDetector(
+          onTap: () async {
+            await getCroppedImaged(index);
+          },
+          child: Image.file(
+            _image[index],
+            fit: BoxFit.fill,
+          ),
+        );
+      }),
+    );
+  }
+
+  getCroppedImaged(index) async {
+    File croppedFile = await ImageCropper.cropImage(
+        sourcePath: _image[index].path,
+        aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
+        maxWidth: 700,
+        maxHeight: 700,
+        aspectRatioPresets: [
+          CropAspectRatioPreset.square,
+          CropAspectRatioPreset.ratio3x2,
+          CropAspectRatioPreset.original,
+          CropAspectRatioPreset.ratio4x3,
+          CropAspectRatioPreset.ratio16x9
+        ],
+        androidUiSettings: AndroidUiSettings(
+            toolbarColor: Color(0xffd65338),
+            toolbarTitle: "Edit Image",
+            showCropGrid: false,
+            backgroundColor: Colors.white,
+            statusBarColor: Color(0xffd65338),
+            lockAspectRatio: false));
+    setState(() {
+      if (croppedFile != null) {
+        _image[index] = croppedFile;
+      }
+    });
+  }
+
+  getImageFromCamera() async {
+    final pickedFile = await picker.getImage(source: ImageSource.camera);
+    setState(() {
+      if (pickedFile != null) {
+        print("0000000000000000000 =============>>>>>>>${pickedFile.path}");
+        _image.add(File(pickedFile.path));
+      } else {
+        print("No Images selected");
+      }
+    });
+  }
+
+  createPDF() async {
+    for (var img in _image) {
+      final image = pw.MemoryImage(img.readAsBytesSync());
+      print("0000000 =======>>>>>$image");
+      pdf.addPage(pw.Page(
+          pageFormat: PdfPageFormat.a3,
+          build: (pw.Context context) {
+            return pw.Image(image, fit: pw.BoxFit.cover);
+          }));
+    }
+  }
+
+  savePDF(String name) async {
+    try {
+      List<StorageInfo> storageInfo = await PathProviderEx.getStorageInfo();
+      var root = storageInfo[0].rootDir + "/Image to PDF Convertor";
+      final file = File("${root}/$name.pdf");
+      await file.writeAsBytes(await pdf.save());
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+}
