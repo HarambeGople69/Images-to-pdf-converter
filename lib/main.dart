@@ -25,6 +25,7 @@ class MyApp extends StatelessWidget {
         designSize: Size(1080, 1920),
         builder: () {
           return MaterialApp(
+            title: "Image to pdf converter",
             // locale: DevicePreview.locale(context), // Add the locale here
             // builder: DevicePreview.appBuilder,
             debugShowCheckedModeBanner: false,
