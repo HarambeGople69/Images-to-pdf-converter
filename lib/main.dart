@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'package:device_preview/device_preview.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -52,6 +51,12 @@ class _SplashScreensState extends State<SplashScreens> {
   Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations(
         [DeviceOrientation.portraitDown, DeviceOrientation.portraitUp]);
+
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarBrightness: Brightness.dark
+      )
+    );
 
     return Container(
       color: Color(0xffd65338),

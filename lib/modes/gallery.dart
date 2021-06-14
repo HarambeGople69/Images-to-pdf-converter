@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_absolute_path/flutter_absolute_path.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:multi_image_picker/multi_image_picker.dart';
@@ -17,7 +19,7 @@ class Gallery extends StatefulWidget {
 
 class _GalleryState extends State<Gallery> {
   final pdf = pw.Document();
-  List<File> _imagePick = [];
+  List<File>  _imagePick = [];
   List<Asset> _images = <Asset>[];
   Future<void> loadAssets() async {
     List<Asset> resultList = <Asset>[];
@@ -64,7 +66,10 @@ class _GalleryState extends State<Gallery> {
             onTap: () {
               getCroppedImaged(index);
             },
-            child: Image.file(_imagePick[index],fit: BoxFit.cover,));
+            child: Image.file(
+              _imagePick[index],
+              fit: BoxFit.cover,
+            ));
       }),
     );
   }
@@ -361,13 +366,48 @@ class _GalleryState extends State<Gallery> {
     }
   }
 
+  // Future<File> compressFile(File file) async {
+  //   final filePath = file.absolute.path;
+
+  //   // Create output file path
+  //   // eg:- "Volume/VM/abcd_out.jpeg"
+  //   final lastIndex = filePath.lastIndexOf(new RegExp(r'.png'));
+  //   final splitted = filePath.substring(0, (lastIndex));
+  //   final outPath = "${splitted}_out${filePath.substring(lastIndex)}";
+  //   var result = await FlutterImageCompress.compressAndGetFile(
+
+  //     file.absolute.path,
+  //     outPath,
+  //     quality: 55,
+  //     format: CompressFormat.png,
+  //   );
+
+  //   print(file.lengthSync());
+  //   print(result.lengthSync());
+
+  //   return result;
+  // }
+
+  Future<File> compressFile(File file) async {
+    File compressedFile = await FlutterNativeImage.compressImage(
+      file.path,
+      quality: 35,
+    );
+    return compressedFile;
+  }
+
   AssetToImage() async {
     for (var item in _images) {
       String pathss =
           await FlutterAbsolutePath.getAbsolutePath(item.identifier);
-      setState(() {
-        _imagePick.add(File(pathss));
-      });
+      if (pathss != null) {
+        var a = await compressFile(File(pathss));
+
+        await _imagePick.add(a);
+      }
+      print("0000000000000===>>>$pathss");
+      // _imagePick.add(File(pathss));
+      setState(() {});
     }
   }
 

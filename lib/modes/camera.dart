@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter_launcher_icons/constants.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider_ex/path_provider_ex.dart';
@@ -6,7 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../homepage.dart';
 
 class Camera extends StatefulWidget {
@@ -323,16 +325,37 @@ class _CameraState extends State<Camera> {
     });
   }
 
+  Future<File> compressFile(File file) async {
+    final filePath = file.absolute.path;
+
+    // Create output file path
+    // eg:- "Volume/VM/abcd_out.jpeg"
+    final lastIndex = filePath.lastIndexOf(new RegExp(r'.jp'));
+    final splitted = filePath.substring(0, (lastIndex));
+    final outPath = "${splitted}_out${filePath.substring(lastIndex)}";
+    var result = await FlutterImageCompress.compressAndGetFile(
+      file.absolute.path,
+      outPath,
+      quality: 55,
+    );
+
+    print(file.lengthSync());
+    print(result.lengthSync());
+
+    return result;
+  }
+
   getImageFromCamera() async {
     final pickedFile = await picker.getImage(source: ImageSource.camera);
-    setState(() {
-      if (pickedFile != null) {
-        print("0000000000000000000 =============>>>>>>>${pickedFile.path}");
-        _image.add(File(pickedFile.path));
-      } else {
-        print("No Images selected");
-      }
-    });
+
+    if (pickedFile != null) {
+      print("0000000000000000000 =============>>>>>>>${pickedFile.path}");
+      var a = await compressFile(File(pickedFile.path));
+      await _image.add(a);
+    } else {
+      print("No Images selected");
+    }
+    setState(() {});
   }
 
   createPDF() async {
